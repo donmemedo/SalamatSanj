@@ -1,0 +1,174 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f2f2f7;
+  --surface: rgb(255 255 255 / 0.72);
+  --solid: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --line: rgb(0 0 0 / 0.07);
+  --fill: rgb(120 120 128 / 0.12);
+  --shadow: 0 1px 1px rgb(0 0 0 / 0.03), 0 10px 30px -8px rgb(0 0 0 / 0.1);
+  --move: #fa114f;
+  --steps: #34c759;
+  --sleep: #5856d6;
+  --eat: #ff9500;
+  --heart: #ff3b30;
+  --water: #0a84ff;
+  --accent: #0071e3;
+  --blob-opacity: 0.35;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: #000000;
+  --surface: rgb(28 28 30 / 0.66);
+  --solid: #1c1c1e;
+  --fg: #f5f5f7;
+  --muted: #98989f;
+  --line: rgb(255 255 255 / 0.09);
+  --fill: rgb(118 118 128 / 0.24);
+  --shadow: 0 0 0 0.5px rgb(255 255 255 / 0.06), 0 16px 40px -12px rgb(0 0 0 / 0.8);
+  --move: #ff375f;
+  --steps: #30d158;
+  --sleep: #7d7aff;
+  --eat: #ff9f0a;
+  --heart: #ff453a;
+  --water: #64d2ff;
+  --accent: #2997ff;
+  --blob-opacity: 0.22;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-solid: var(--solid);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-fill: var(--fill);
+  --color-move: var(--move);
+  --color-steps: var(--steps);
+  --color-sleep: var(--sleep);
+  --color-eat: var(--eat);
+  --color-heart: var(--heart);
+  --color-water: var(--water);
+  --color-accent: var(--accent);
+}
+
+html {
+  background: var(--bg);
+  -webkit-tap-highlight-color: transparent;
+}
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Inter Variable", "Vazirmatn Variable", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11", "ss01";
+  transition: background-color 0.4s, color 0.4s;
+}
+html[lang="fa"] body {
+  font-family: "Vazirmatn Variable", -apple-system, system-ui, sans-serif;
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ambient aurora behind the glass */
+.aurora {
+  position: fixed;
+  inset: -20vmax;
+  z-index: -1;
+  pointer-events: none;
+  filter: blur(80px);
+  opacity: var(--blob-opacity);
+}
+.aurora i {
+  position: absolute;
+  width: 55vmax;
+  height: 55vmax;
+  border-radius: 50%;
+  animation: drift 28s ease-in-out infinite alternate;
+}
+.aurora i:nth-child(1) { background: var(--move); top: 5%; left: 0; }
+.aurora i:nth-child(2) { background: var(--sleep); top: 30%; right: 0; animation-delay: -9s; }
+.aurora i:nth-child(3) { background: var(--steps); bottom: 0; left: 30%; animation-delay: -18s; opacity: 0.7; }
+@keyframes drift {
+  to { transform: translate3d(8vmax, -6vmax, 0) scale(1.15) rotate(40deg); }
+}
+
+.glass {
+  background: var(--surface);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  border: 0.5px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.card {
+  border-radius: 28px;
+  padding: 1.25rem;
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.5s;
+}
+@media (hover: hover) {
+  .card.lift:hover { transform: translateY(-3px) scale(1.005); }
+}
+.press { transition: transform 0.25s cubic-bezier(0.3, 1.6, 0.5, 1), background-color 0.2s, opacity 0.2s; }
+.press:active { transform: scale(0.95); }
+
+.rise {
+  animation: rise 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); filter: blur(6px); }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, var(--fill) 25%, transparent 50%, var(--fill) 75%) 0 0 / 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+.gradient-text {
+  background: linear-gradient(120deg, var(--move), var(--eat) 45%, var(--sleep));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 0.35);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+dialog[open] { animation: sheet 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes sheet { from { transform: translateY(40px) scale(0.97); opacity: 0; } }
+
+/* Circular reveal on theme switch (View Transitions API) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.reveal { animation: reveal 1.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes reveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+.grow-y { transform-origin: bottom; animation: grow-y 0.9s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes grow-y { from { transform: scaleY(0); } }
+.fill-x { animation: fill-x 1.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes fill-x { from { width: 0; } }
+.float { animation: float 6s ease-in-out infinite; }
+@keyframes float { 50% { transform: translateY(-10px) rotate(-3deg); } }

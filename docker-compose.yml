@@ -1,0 +1,20 @@
+services:
+  backend:
+    build: { context: ./backend, network: host }
+    ports: ["8434:8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      retries: 5
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      network: host
+      args:
+        BACKEND_URL: http://backend:8000
+    ports: ["3434:3000"]
+    depends_on:
+      backend: { condition: service_healthy }
+    restart: unless-stopped
