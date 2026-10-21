@@ -1,12 +1,20 @@
 services:
   backend:
     build: { context: ./backend, network: host }
-    ports: ["8434:8000"]
+    # No published port: the frontend reaches it at backend:8000 on the compose network.
+    # To reach it from the host while debugging, add: ports: ["127.0.0.1:8434:8000"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
       interval: 10s
       retries: 5
     restart: unless-stopped
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 1
 
   frontend:
     build:
@@ -15,6 +23,16 @@ services:
       args:
         BACKEND_URL: http://backend:8000
     ports: ["3434:3000"]
+    environment:
+      # Host names the web app answers to. Add your LAN IP or domain to open it from other devices.
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
     depends_on:
       backend: { condition: service_healthy }
     restart: unless-stopped
+    read_only: true
+    tmpfs: ["/tmp", "/app/.next/cache:uid=1000,gid=1000"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 256
+    mem_limit: 512m
+    cpus: 1

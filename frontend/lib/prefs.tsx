@@ -59,20 +59,23 @@ function usePrefsState() {
 
   return useMemo(() => {
     const locale = lang === "fa" ? "fa-IR" : "en-US"
+    const cal = lang === "fa" ? "fa-IR-u-ca-persian" : "en-US"
+    // Intl formatters are costly to build; make each once per language, not per call (CountUp calls n() every frame).
+    const nf: Intl.NumberFormat[] = []
+    const n = (x: number, digits = 0) => (nf[digits] ??= new Intl.NumberFormat(locale, { maximumFractionDigits: digits })).format(x)
+    const weekday = { short: new Intl.DateTimeFormat(cal, { weekday: "short" }), narrow: new Intl.DateTimeFormat(cal, { weekday: "narrow" }) }
+    const shortDate = new Intl.DateTimeFormat(cal, { day: "numeric", month: "short" })
+    const longDate = new Intl.DateTimeFormat(cal, { weekday: "long", day: "numeric", month: "long" })
     return {
-      lang, theme, setLang, setTheme,
+      lang, theme, setLang, setTheme, n,
       t: (k: Key) => dict[lang][k],
       pick: (b: Bi) => b[lang],
       digits: (s: string) => (lang === "fa" ? s.replace(/\d/g, (c) => "۰۱۲۳۴۵۶۷۸۹"[+c]) : s),
-      pct: (x: number) => new Intl.NumberFormat(locale).format(Math.round(x)) + (lang === "fa" ? "٪" : "%"),
-      n: (x: number, digits = 0) => new Intl.NumberFormat(locale, { maximumFractionDigits: digits }).format(x),
-      day: (iso: string, weekday: "short" | "narrow" = "short") =>
-        new Intl.DateTimeFormat(lang === "fa" ? "fa-IR-u-ca-persian" : "en-US", { weekday }).format(new Date(iso + "T12:00")),
-      short: (iso: string) =>
-        new Intl.DateTimeFormat(lang === "fa" ? "fa-IR-u-ca-persian" : "en-US", { day: "numeric", month: "short" }).format(new Date(iso + "T12:00")),
-      longDate: () =>
-        new Intl.DateTimeFormat(lang === "fa" ? "fa-IR-u-ca-persian" : "en-US", { weekday: "long", day: "numeric", month: "long" }).format(new Date()),
-      dur: (m: number) => (lang === "fa" ? `${new Intl.NumberFormat(locale).format(Math.floor(m / 60))} ساعت و ${new Intl.NumberFormat(locale).format(m % 60)} دقیقه` : `${Math.floor(m / 60)}h ${m % 60}m`),
+      pct: (x: number) => n(Math.round(x)) + (lang === "fa" ? "٪" : "%"),
+      day: (iso: string, w: "short" | "narrow" = "short") => weekday[w].format(new Date(iso + "T12:00")),
+      short: (iso: string) => shortDate.format(new Date(iso + "T12:00")),
+      longDate: () => longDate.format(new Date()),
+      dur: (m: number) => (lang === "fa" ? `${n(Math.floor(m / 60))} ساعت و ${n(m % 60)} دقیقه` : `${Math.floor(m / 60)}h ${m % 60}m`),
     }
   }, [lang, theme, setLang, setTheme])
 }

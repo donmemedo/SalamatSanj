@@ -1,4 +1,5 @@
 "use client"
+import { useState } from "react"
 import { Check, Users } from "lucide-react"
 import { api, useApi } from "@/lib/api"
 import { usePrefs, type Bi } from "@/lib/prefs"
@@ -15,14 +16,19 @@ const MEDAL = ["🥇", "🥈", "🥉"]
 export default function ChallengesPage() {
   const { t, n, pick, pct } = usePrefs()
   const q = useApi<Data>("/api/challenges")
-  const toggle = async (id: string) => {
-    q.setData((d) => d && { ...d, items: d.items.map((c) => (c.id === id ? { ...c, joined: !c.joined } : c)) })
-    await api(`/api/challenges/${id}/join`, { method: "POST" }).catch(() => q.reload())
+  const [failed, setFailed] = useState(false)
+  // Send the desired state, not "toggle": a retried request can't flip it back.
+  const toggle = async (id: string, joined: boolean) => {
+    setFailed(false)
+    q.setData((d) => d && { ...d, items: d.items.map((c) => (c.id === id ? { ...c, joined } : c)) })
+    await api(`/api/challenges/${id}/join`, { method: "POST", body: JSON.stringify({ joined }) })
+      .catch(() => { setFailed(true); q.reload() })
   }
 
   return (
     <>
       <PageHeader kicker={t("tagline")} title={t("challenges")} />
+      <p role="status" className="mb-4 text-sm font-medium text-heart empty:mb-0">{failed ? t("saveFailed") : ""}</p>
       <Gate q={q}>
         {(d) => (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -41,11 +47,12 @@ export default function ChallengesPage() {
                     <span className="num font-semibold">{n(c.progress)} / {n(c.goal)} {pick(c.unit)}</span>
                     <span className="font-bold" style={{ color }}>{pct((c.progress / c.goal) * 100)}</span>
                   </div>
-                  <Progress value={c.progress / c.goal} color={color} />
-                  <button onClick={() => toggle(c.id)} aria-pressed={c.joined}
-                    className="press mt-5 flex w-full items-center justify-center gap-1.5 rounded-full py-2.5 font-semibold transition-colors"
-                    style={c.joined ? { background: "var(--fill)", color } : { background: color, color: "#fff" }}>
-                    {c.joined && <Check size={18} />}{t(c.joined ? "joined" : "join")}
+                  <Progress value={c.progress / c.goal} color={color} label={pick(c.title)} />
+                  {/* Text color per fill for WCAG contrast (--on-sleep flips with the theme). */}
+                  <button onClick={() => toggle(c.id, !c.joined)} aria-pressed={c.joined}
+                    className="press mt-5 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full py-2.5 font-semibold transition-colors"
+                    style={c.joined ? { background: "var(--fill)", color: "var(--fg)" } : { background: color, color: c.kind === "sleep" ? "var(--on-sleep)" : "#000" }}>
+                    {c.joined && <Check size={18} style={{ color }} />}{t(c.joined ? "joined" : "join")}
                   </button>
                 </Card>
               )
@@ -61,7 +68,7 @@ export default function ChallengesPage() {
                     <span className="grid size-9 place-items-center rounded-full bg-[linear-gradient(135deg,var(--move),var(--sleep))] font-bold text-white">
                       {pick(l.name)[0]}
                     </span>
-                    <span className="flex-1 font-semibold">{pick(l.name)}{l.me && <span className="ms-1.5 text-xs text-move">({t("you")})</span>}</span>
+                    <span className="flex-1 font-semibold">{pick(l.name)}{l.me && <span className="ms-1.5 text-xs text-fg">({t("you")})</span>}</span>
                     <span className="num text-sm text-muted">{n(l.steps)}</span>
                   </li>
                 ))}
@@ -73,10 +80,12 @@ export default function ChallengesPage() {
               <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
                 {d.badges.map((b) => (
                   <div key={b.id} className="flex flex-col items-center gap-1.5 text-center" title={pick(b.name)}>
-                    <span className={`grid size-14 place-items-center rounded-full text-2xl transition ${b.earned ? "bg-[conic-gradient(from_180deg,var(--eat),var(--move),var(--sleep),var(--eat))] shadow-lg hover:scale-110" : "bg-fill opacity-40 grayscale"}`}>
+                    <span aria-hidden className={`grid size-14 place-items-center rounded-full text-2xl transition ${b.earned ? "bg-[conic-gradient(from_180deg,var(--eat),var(--move),var(--sleep),var(--eat))] shadow-lg hover:scale-110" : "bg-fill opacity-40 grayscale"}`}>
                       <span className="grid size-11 place-items-center rounded-full bg-solid">{b.emoji}</span>
                     </span>
-                    <span className="text-[11px] leading-4 text-muted">{pick(b.name)}</span>
+                    <span className="text-[0.6875rem] leading-4 tracking-[0.01em] text-muted">
+                      {pick(b.name)}<span className="sr-only">: {t(b.earned ? "earned" : "notEarned")}</span>
+                    </span>
                   </div>
                 ))}
               </div>

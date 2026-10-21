@@ -16,7 +16,9 @@
   --heart: #ff3b30;
   --water: #0a84ff;
   --accent: #0071e3;
-  --blob-opacity: 0.35;
+  /* Text on --sleep / --accent fills: white passes 4.5:1 on the light-theme colors, black on the dark-theme ones. */
+  --on-sleep: #fff;
+  --on-accent: #fff;
   color-scheme: light;
 }
 
@@ -36,7 +38,8 @@
   --heart: #ff453a;
   --water: #64d2ff;
   --accent: #2997ff;
-  --blob-opacity: 0.22;
+  --on-sleep: #000;
+  --on-accent: #000;
   color-scheme: dark;
 }
 
@@ -55,11 +58,20 @@
   --color-heart: var(--heart);
   --color-water: var(--water);
   --color-accent: var(--accent);
+  --color-on-sleep: var(--on-sleep);
+  --color-on-accent: var(--on-accent);
 }
 
 html {
   background: var(--bg);
   -webkit-tap-highlight-color: transparent;
+  scroll-padding-block: 4.5rem 6.5rem; /* focused controls never hide under the sticky header or tab bar */
+}
+@layer base { /* layered, so utilities such as outline-none still override it */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
 }
 body {
   background: var(--bg);
@@ -76,29 +88,7 @@ html[lang="fa"] body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Ambient aurora behind the glass */
-.aurora {
-  position: fixed;
-  inset: -20vmax;
-  z-index: -1;
-  pointer-events: none;
-  filter: blur(80px);
-  opacity: var(--blob-opacity);
-}
-.aurora i {
-  position: absolute;
-  width: 55vmax;
-  height: 55vmax;
-  border-radius: 50%;
-  animation: drift 28s ease-in-out infinite alternate;
-}
-.aurora i:nth-child(1) { background: var(--move); top: 5%; left: 0; }
-.aurora i:nth-child(2) { background: var(--sleep); top: 30%; right: 0; animation-delay: -9s; }
-.aurora i:nth-child(3) { background: var(--steps); bottom: 0; left: 30%; animation-delay: -18s; opacity: 0.7; }
-@keyframes drift {
-  to { transform: translate3d(8vmax, -6vmax, 0) scale(1.15) rotate(40deg); }
-}
-
+/* Glass is for chrome only (sidebar, top controls, tab bar, sheet), never stacked on another glass. */
 .glass {
   background: var(--surface);
   -webkit-backdrop-filter: blur(28px) saturate(180%);
@@ -106,7 +96,11 @@ html[lang="fa"] body {
   border: 0.5px solid var(--line);
   box-shadow: var(--shadow);
 }
+/* Content surfaces are solid. background-color only, so a bg-[linear-gradient()] tint can layer on top. */
 .card {
+  background-color: var(--solid);
+  border: 0.5px solid var(--line);
+  box-shadow: var(--shadow);
   border-radius: 28px;
   padding: 1.25rem;
   transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.5s;
@@ -114,15 +108,16 @@ html[lang="fa"] body {
 @media (hover: hover) {
   .card.lift:hover { transform: translateY(-3px) scale(1.005); }
 }
-.press { transition: transform 0.25s cubic-bezier(0.3, 1.6, 0.5, 1), background-color 0.2s, opacity 0.2s; }
-.press:active { transform: scale(0.95); }
+/* Instant feedback on press, critically damped release (no overshoot on a plain tap). */
+.press { transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.2s, opacity 0.2s; }
+.press:active { transform: scale(0.96); transition-duration: 0.08s; }
 
 .rise {
   animation: rise 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: calc(var(--i, 0) * 70ms);
 }
 @keyframes rise {
-  from { opacity: 0; transform: translateY(18px) scale(0.98); filter: blur(6px); }
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
 }
 
 .shimmer {
@@ -138,13 +133,27 @@ html[lang="fa"] body {
   color: transparent;
 }
 
-dialog::backdrop {
-  background: rgb(0 0 0 / 0.35);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+/* Sheet: enters and exits along the same path. Transitions (not keyframes) retarget from the live value,
+   so a close mid-open reverses smoothly. The dim alone separates it; no blur under the glass sheet. */
+dialog {
+  --sheet-from: translateY(100%);
+  --sheet-t: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), translate 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.25s;
+  opacity: 0;
+  transform: var(--sheet-from);
+  transition: var(--sheet-t);
 }
-dialog[open] { animation: sheet 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
-@keyframes sheet { from { transform: translateY(40px) scale(0.97); opacity: 0; } }
+@media (min-width: 640px) { dialog { --sheet-from: translateY(2rem) scale(0.97); } }
+dialog[open] { opacity: 1; transform: none; }
+@starting-style { dialog[open] { opacity: 0; transform: var(--sheet-from); } }
+dialog::backdrop { background: rgb(0 0 0 / 0); transition: background-color 0.35s; }
+dialog[open]::backdrop { background: rgb(0 0 0 / 0.35); }
+@starting-style { dialog[open]::backdrop { background: rgb(0 0 0 / 0); } }
+/* The exit animation needs the dialog kept in the top layer while it plays. Browsers that can't transition
+   `overlay` would show it inline mid-page instead, so they close instantly. */
+@supports (overlay: auto) {
+  dialog { transition: var(--sheet-t), overlay 0.35s allow-discrete, display 0.35s allow-discrete; }
+  dialog::backdrop { transition: background-color 0.35s, overlay 0.35s allow-discrete, display 0.35s allow-discrete; }
+}
 
 /* Circular reveal on theme switch (View Transitions API) */
 ::view-transition-old(root),
@@ -160,15 +169,32 @@ dialog[open] { animation: sheet 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
   }
+  /* Cross-fade instead of slide, grow or sweep; ease the light/dark switch instead of a brightness jump. */
+  .rise, .grow-y, .fill-x, .reveal { animation: fade 0.2s ease both !important; }
+  body { transition-duration: 0.4s !important; }
+}
+@keyframes fade { from { opacity: 0; } }
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .glass { background: var(--solid); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@media (prefers-contrast: more) {
+  .glass, .card { border: 1px solid var(--fg); }
+  :root { --muted: #424245; --line: rgb(0 0 0 / 0.5); }
+  [data-theme="dark"] { --muted: #c7c7cc; --line: rgb(255 255 255 / 0.5); }
 }
 
 .reveal { animation: reveal 1.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
 @keyframes reveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 .grow-y { transform-origin: bottom; animation: grow-y 0.9s cubic-bezier(0.16, 1, 0.3, 1) both; }
 @keyframes grow-y { from { transform: scaleY(0); } }
-.fill-x { animation: fill-x 1.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
-@keyframes fill-x { from { width: 0; } }
-.float { animation: float 6s ease-in-out infinite; }
+/* transform, not width: no layout per frame. Grows from the inline start in either direction. */
+.fill-x { transform-origin: left; animation: fill-x 1.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.fill-x:dir(rtl) { transform-origin: right; }
+@keyframes fill-x { from { transform: scaleX(0); } }
+.float { animation: float 6s ease-in-out 2; } /* two cycles, then rest: no endless slow loop */
 @keyframes float { 50% { transform: translateY(-10px) rotate(-3deg); } }

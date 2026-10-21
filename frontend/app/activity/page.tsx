@@ -9,7 +9,7 @@ export default function ActivityPage() {
   const { t, n, day, short } = usePrefs()
   const [days, setDays] = useState<"7" | "30">("7")
   const q = useApi<Day[]>(`/api/history?days=${days}`)
-  const range = <Segmented value={days} onChange={setDays} options={[{ value: "7", label: t("days7") }, { value: "30", label: t("days30") }]} />
+  const range = <Segmented label={t("range")} value={days} onChange={setDays} options={[{ value: "7", label: t("days7") }, { value: "30", label: t("days30") }]} />
 
   return (
     <>
@@ -35,18 +35,18 @@ export default function ActivityPage() {
 
               <Card i={4} className="md:col-span-2 xl:col-span-4">
                 <Title>{t("steps")}</Title>
-                <AreaChart key={days} values={steps} color="var(--move)" height={220} label={(i, v) => `${lbl(i)} · ${n(v)}`} />
+                <AreaChart key={d.length} values={steps} color="var(--move)" height={220} label={(i, v) => `${lbl(i)} · ${n(v)}`} />
               </Card>
 
               <Card i={5} className="md:col-span-2">
                 <Title>{t("activeMin")}</Title>
-                <Bars key={days} values={d.map((x) => x.active_min)} color="var(--steps)" goal={45} fmt={(v) => `${n(v)} ${t("min")}`}
+                <Bars key={d.length} values={d.map((x) => x.active_min)} color="var(--steps)" goal={45} fmt={(v) => `${n(v)} ${t("min")}`}
                   labels={d.map((x, i) => (d.length <= 7 || i % 5 === 0 ? day(x.date, "narrow") : ""))} />
               </Card>
 
               <Card i={6} className="md:col-span-2">
                 <Title>{t("resting")}</Title>
-                <AreaChart key={days} values={d.map((x) => x.resting_hr)} color="var(--heart)" height={150}
+                <AreaChart key={d.length} values={d.map((x) => x.resting_hr)} color="var(--heart)" height={150}
                   label={(i, v) => `${lbl(i)} · ${n(v)} ${t("bpm")}`} />
               </Card>
             </div>

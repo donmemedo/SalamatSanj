@@ -5,8 +5,9 @@ import "./globals.css"
 import { PrefsProvider, bootScript } from "@/lib/prefs"
 import { Shell } from "@/components/shell"
 
+// No metadata title: every page sets its own "<page> · <brand>" through PageHeader, and a second
+// <title> earlier in <head> would win and hide the route name from tabs and screen readers.
 export const metadata: Metadata = {
-  title: "آپ‌سلامت · UP Iran",
   description: "Sleep, activity and nutrition insights for Iran — پایش خواب، حرکت و تغذیه",
 }
 

@@ -1,0 +1,6 @@
+# Test and audit tools only, never installed in the image. Install after requirements.txt
+# (that file uses --require-hashes, so the two can't be combined in one pip call).
+httpx==0.28.1
+pytest==9.1.1
+bandit==1.9.4
+pip-audit==2.10.1

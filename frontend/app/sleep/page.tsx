@@ -38,10 +38,11 @@ export default function SleepPage() {
               <Card i={1} className="md:col-span-2">
                 <Title>{t("stages")}</Title>
                 <div className="flex gap-3">
-                  <div className="grid shrink-0 text-[12px] text-muted" style={{ gridTemplateRows: "repeat(4, 44px)" }}>
+                  <div aria-hidden className="grid shrink-0 text-xs text-muted" style={{ gridTemplateRows: "repeat(4, 44px)" }}>
                     {ROWS.map((r) => <span key={r} className="flex items-center">{t(r)}</span>)}
                   </div>
-                  <div className="flex-1">
+                  {/* Visual only: the stage tiles below give the same minutes as text. */}
+                  <div aria-hidden className="flex-1">
                   <div dir="ltr" className="relative" style={{ height: 176 }}>
                     {ROWS.map((_, k) => <div key={k} className="absolute inset-x-0 border-t border-dashed border-line" style={{ top: k * 44 + 22 }} />)}
                     {s.stages.map((g, k) => (
@@ -56,9 +57,9 @@ export default function SleepPage() {
                   </div>
                 </div>
 
-                <div dir="ltr" className="mt-6 flex h-3 overflow-hidden rounded-full">
+                <div aria-hidden dir="ltr" className="fill-x mt-6 flex h-3 overflow-hidden rounded-full">
                   {(["deep", "rem", "light", "awake"] as Stage[]).map((k) => (
-                    <div key={k} className="fill-x h-full" style={{ width: `${(s[k] / span) * 100}%`, background: STAGE_COLOR[k] }} />
+                    <div key={k} className="h-full" style={{ width: `${(s[k] / span) * 100}%`, background: STAGE_COLOR[k] }} />
                   ))}
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -80,6 +81,7 @@ export default function SleepPage() {
               <Card i={3} className="lift bg-[linear-gradient(135deg,color-mix(in_srgb,var(--sleep)_22%,transparent),transparent)]">
                 <Title action={<Lightbulb className="text-eat" size={20} />}>{t("insights")}</Title>
                 <p className="leading-8">{t("sleepTip")}</p>
+                <p className="mt-3 text-xs leading-5 text-muted">{t("disclaimer")}</p>
               </Card>
             </div>
           )

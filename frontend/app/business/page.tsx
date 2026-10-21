@@ -30,7 +30,7 @@ export default function BusinessPage() {
                   <b className="text-4xl"><CountUp value={o.wellbeing} /></b>
                 </Rings>
                 <div className="grid flex-1 gap-4">
-                  <Stat label={t("wellbeing")} color="var(--steps)" value={<CountUp value={o.wellbeing} />} unit="/ 100" />
+                  <Stat label={t("wellbeing")} color="var(--steps)" value={<CountUp value={o.wellbeing} />} unit={`/ ${n(100)}`} />
                   <Stat label={t("activeUsers")} color="var(--water)" value={<CountUp value={o.active} />} unit={`/ ${n(o.members)}`} />
                   <Stat label={t("participation")} color="var(--move)" value={pct(o.challenge_rate)} />
                 </div>
@@ -56,9 +56,9 @@ export default function BusinessPage() {
                     </div>
                     <div className="grid gap-2 text-sm">
                       <div className="flex justify-between"><span className="text-muted">{t("avgSteps")}</span><b className="num">{n(dp.avg_steps)}</b></div>
-                      <Progress value={dp.avg_steps / 10000} color="var(--move)" />
+                      <Progress value={dp.avg_steps / 10000} color="var(--move)" label={t("avgSteps")} />
                       <div className="flex justify-between"><span className="text-muted">{t("participation")}</span><b>{pct(dp.participation)}</b></div>
-                      <Progress value={dp.participation / 100} color="var(--steps)" />
+                      <Progress value={dp.participation / 100} color="var(--steps)" label={t("participation")} />
                     </div>
                   </div>
                 ))}
