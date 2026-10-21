@@ -1,6 +1,6 @@
 "use client"
 import Link from "next/link"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { BedDouble, ChevronLeft, Droplet, Flame, Footprints, Heart, Minus, Plus, Sparkles, Utensils } from "lucide-react"
 import { api, useApi } from "@/lib/api"
 import { usePrefs } from "@/lib/prefs"
@@ -22,7 +22,9 @@ export default function TodayPage() {
 
   return (
     <>
-      <PageHeader kicker={longDate()} title={q.data ? `${greet}${p.lang === "fa" ? "، " : ", "}${pick(q.data.user.name)}` : greet} />
+      {/* Date and greeting depend on the viewer's clock, so they render only on the client (the shell is prerendered). */}
+      <PageHeader kicker={q.data ? longDate() : undefined} docTitle={t("today")}
+        title={q.data ? `${greet}${p.lang === "fa" ? "، " : ", "}${pick(q.data.user.name)}` : t("today")} />
       <Gate q={q}>
         {(d) => {
           const g = d.goals, x = d.today
@@ -43,7 +45,7 @@ export default function TodayPage() {
                       { label: t("sleep"), v: Math.round(d.sleep.minutes / 6) / 10, goal: g.sleep_min / 60, color: "var(--sleep)", unit: t("hours"), digits: 1 },
                     ].map((r) => (
                       <div key={r.label}>
-                        <p className="text-[13px] font-semibold" style={{ color: r.color }}>{r.label}</p>
+                        <p className="text-[0.8125rem] font-semibold" style={{ color: r.color }}>{r.label}</p>
                         <p className="text-3xl font-bold tracking-tight">
                           <CountUp value={r.v} digits={r.digits} />
                           <span className="text-lg font-semibold text-muted"> / {n(r.goal)} {r.unit}</span>
@@ -60,7 +62,7 @@ export default function TodayPage() {
               </Card>
 
               <Card i={1} className="lift">
-                <Title action={<Heart className="animate-pulse text-heart" fill="currentColor" size={20} />}>{t("heart")}</Title>
+                <Title action={<Heart className="text-heart" fill="currentColor" size={20} />}>{t("heart")}</Title>
                 <p className="text-5xl font-bold tracking-tight"><CountUp value={bpm} /><span className="text-base font-medium text-muted"> {t("bpm")}</span></p>
                 <p className="mt-1 mb-3 text-sm text-muted">{t("resting")}: {n(x.resting_hr)}</p>
                 <AreaChart values={d.heart.map((v) => v.bpm)} color="var(--heart)" height={110}
@@ -75,11 +77,12 @@ export default function TodayPage() {
                     return (
                       <li key={k} className="rise flex items-start gap-3 rounded-2xl bg-fill p-3.5" style={{ "--i": k + 3 } as React.CSSProperties}>
                         <span className="grid size-9 shrink-0 place-items-center rounded-xl text-white" style={{ background: color }}><Icon size={18} /></span>
-                        <p className="text-[15px] leading-7">{pick(it.text)}</p>
+                        <p className="text-[0.9375rem] leading-7">{pick(it.text)}</p>
                       </li>
                     )
                   })}
                 </ul>
+                <p className="mt-3 text-xs leading-5 text-muted">{t("disclaimer")}</p>
               </Card>
 
               <Water initial={d.water} goal={g.water} />
@@ -92,7 +95,7 @@ export default function TodayPage() {
                 ].map((r) => (
                   <div key={r.label} className="mb-4">
                     <div className="mb-1.5 flex justify-between text-sm"><span className="text-muted">{r.label}</span><b className="num">{n(r.v)}</b></div>
-                    <Progress value={r.v / g.kcal_in} color={r.color} />
+                    <Progress value={r.v / g.kcal_in} color={r.color} label={r.label} />
                   </div>
                 ))}
                 <Link href="/nutrition" className="press inline-flex items-center gap-1 text-sm font-semibold text-accent">
@@ -135,30 +138,43 @@ export default function TodayPage() {
   )
 }
 
+const MAX_WATER = 20 // the backend clamps to the same range
+
 function Water({ initial, goal }: { initial: number; goal: number }) {
   const { t, n } = usePrefs()
   const [w, setW] = useState(initial)
+  const [failed, setFailed] = useState(false)
+  const pending = useRef(0)
+  // Responses can arrive in any order, so none of them is trusted alone: once a burst of taps settles, read the
+  // server's value (also undoes any tap that failed). Taps that start meanwhile keep the optimistic value.
+  const sync = () => api<Today>("/api/today").then((d) => { if (!pending.current) setW(d.water) }, () => {})
   const change = (delta: 1 | -1) => {
-    setW((v) => Math.max(0, v + delta)) // optimistic
-    api<{ water: number }>("/api/water", { method: "POST", body: JSON.stringify({ delta }) }).then((r) => setW(r.water), () => setW(initial))
+    pending.current++
+    setFailed(false)
+    setW((v) => v + delta) // optimistic; the buttons are disabled at both ends, so this always applies
+    api("/api/water", { method: "POST", body: JSON.stringify({ delta }) })
+      .catch(() => setFailed(true))
+      .finally(() => { if (--pending.current === 0) sync() })
   }
-  const btn = "press grid size-10 place-items-center rounded-full bg-fill"
+  const btn = "press grid size-11 place-items-center rounded-full bg-fill"
   return (
     <Card i={3} className="lift">
       <Title action={<Droplet className="text-water" fill="currentColor" size={20} />}>{t("water")}</Title>
-      <p className="text-4xl font-bold tracking-tight"><span className="num">{n(w)}</span><span className="text-base font-medium text-muted"> / {n(goal)} {t("glasses")}</span></p>
-      <div className="my-5 grid grid-cols-8 gap-1.5" dir="ltr">
+      <p aria-live="polite" className="text-4xl font-bold tracking-tight"><span className="num">{n(w)}</span><span className="text-base font-medium text-muted"> / {n(goal)} {t("glasses")}</span></p>
+      <div aria-hidden className="my-5 grid grid-cols-8 gap-1.5" dir="ltr">
         {Array.from({ length: goal }, (_, k) => (
           <span key={k} className="h-9 rounded-b-xl rounded-t-md border-2 transition-all duration-500"
             style={{ borderColor: "var(--water)", background: k < w ? "var(--water)" : "transparent", transitionDelay: `${k * 40}ms`, opacity: k < w ? 1 : 0.35 }} />
         ))}
       </div>
       <div className="flex gap-2">
-        <button aria-label="-1" className={btn} onClick={() => change(-1)} disabled={w === 0}><Minus size={18} /></button>
-        <button aria-label="+1" className={`${btn} flex-1 gap-1.5 bg-water! font-semibold text-white grid-flow-col`} onClick={() => change(1)}>
-          <Plus size={18} /> {t("glasses")}
+        <button aria-label={t("removeGlass")} className={btn} onClick={() => change(-1)} disabled={w <= 0}><Minus size={18} /></button>
+        {/* Black on the water fill: 5.8:1 light, 12:1 dark. White text failed WCAG contrast in both themes. */}
+        <button className={`${btn} flex-1 gap-1.5 bg-water! font-semibold text-black grid-flow-col`} onClick={() => change(1)} disabled={w >= MAX_WATER}>
+          <Plus size={18} /> {t("addGlass")}
         </button>
       </div>
+      <p role="status" className="mt-2 min-h-5 text-sm font-medium text-heart">{failed ? t("saveFailed") : ""}</p>
     </Card>
   )
 }

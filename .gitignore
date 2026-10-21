@@ -7,3 +7,6 @@ backend/data/
 
 Docs
 .idea
+# Secrets and build output
+.env*
+*.tsbuildinfo
