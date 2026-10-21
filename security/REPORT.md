@@ -6,7 +6,7 @@ Branch `security-perf-ux-hardening`, against `main` at `34d6402`. October 2026.
 
 The app is a demo with fake, deterministic health data and no accounts. Nothing critical was exploitable, but the API accepted anything from anywhere. Any website could drive it through permissive CORS. Any Host header was accepted, which is the precondition for DNS rebinding. Bodies of any size were read. NaN in a body crashed requests into a 500. Meals grew without a limit. One request for a year of history cost about 190 ms of CPU, with no cache and no compression.
 
-All of these are fixed and covered by tests. The frontend now sends a CSP and the other security headers, refuses unknown Host names, and no longer advertises its framework. The production dependency on Next.js 16.3.6 carried six published advisories, one of them high severity; the branch upgrades it to 16.3.8 (see "Dependency upgrade" for status).
+All of these are fixed and covered by tests. The frontend now sends a CSP and the other security headers, refuses unknown Host names, and no longer advertises its framework. The production dependency on Next.js 16.3.6 carried six published advisories, one of them high severity. The branch upgrades it to 16.3.8 and sets npm overrides for two flagged transitive packages. OSV now reports no known vulnerabilities in the 57-package production tree.
 
 Every security control was kept cheap: header checks are O(1), the guard is pure ASGI rather than `BaseHTTPMiddleware`, and the CSP is static so every page stays prerendered.
 
@@ -78,7 +78,7 @@ Severity is after skeptic verification. "Verified" means a test or a probe prove
 | F1, F2 | low | No CSP or frame protection, `X-Powered-By` | Static CSP with `frame-ancestors 'none'`, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy; `poweredByHeader: false` | live on production build |
 | NEW | low | The /api rewrite replaces Host, so the backend's Host check can't stop rebinding through the web origin | `proxy.ts` Host allowlist from `ALLOWED_HOSTS` | live: evil Host gets 400 |
 | F5 | low | Dev and start servers listened on every interface | `-H 127.0.0.1` | — |
-| F6 | high | next 16.3.6: 6 advisories (1 high SSRF in image optimization, 4 moderate, 1 low); sharp 0.35.4 and source-map-js 1.2.1 also flagged | Upgrade to next 16.3.8 and sharp 0.35.5 | see "Dependency upgrade" |
+| F6 | high | next 16.3.6: 6 advisories (1 high SSRF in image optimization, 4 moderate, 1 low); sharp 0.35.4 (librsvg CVE) and source-map-js 1.2.1 also flagged | next 16.3.8; npm `overrides` floors sharp at 0.35.5 and source-map-js at 1.2.2, keeping sharp Next's optional dependency | OSV: none |
 | C1, P7 | medium | `useApi` let a slow old response overwrite a newer one | Sequence guard in the shared hook | review |
 | NEW | medium | AreaChart crashed when data shrank under a hover | Bounds guard | review |
 | NEW | medium | Home page prerendered the build day and greeting | Rendered only from client data | build output |
@@ -134,7 +134,7 @@ Applied from the apple-design guidance:
 | bandit | 0 issues (5 justified `nosec B311`: seeded demo data) |
 | semgrep, security-audit and dockerfile rules on changed files | 0 findings (before: 3) |
 | OSV, 13 pinned Python packages | no known vulnerabilities |
-| OSV, 57 production npm packages | before upgrade: next 16.3.6 (6), sharp (1), source-map-js (1) |
+| OSV, 57 production npm packages | before: next 16.3.6 (6 advisories), sharp (1), source-map-js (1). After: none |
 | `tsc --noEmit` | clean |
 | `next build` | passes; all 8 routes still static |
 | Live production frontend | CSP and headers present, no `X-Powered-By`, evil Host gets 400, `frame-ancestors 'none'` |
